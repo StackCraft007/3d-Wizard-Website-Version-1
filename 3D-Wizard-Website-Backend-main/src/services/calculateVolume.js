@@ -35,23 +35,44 @@ class VolumeCalculatorService {
       formData.append('file', fs.createReadStream(filePath));
       console.log('FormData headers:', formData.getHeaders());
 
-      try {
-        const response = await axios.post(apiUrl, formData, {
-          headers: formData.getHeaders(),
-        });
+      // Retry with backoff for transient 5xx/timeout issues
+      const maxAttempts = 3;
+      let lastError;
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+          const response = await axios.post(apiUrl, formData, {
+            headers: {
+              ...formData.getHeaders(),
+              'Accept': 'application/json'
+            },
+            maxContentLength: Infinity,
+            maxBodyLength: Infinity,
+            timeout: 30000
+          });
 
-        const volume = response.data.volume;
-
-        if (!volume || volume <= 0) {
-          throw new Error(`Invalid volume calculated: ${volume}`);
+          const volume = response.data.volume;
+          if (!volume || volume <= 0) {
+            throw new Error(`Invalid volume calculated: ${volume}`);
+          }
+          console.log('Volume calculated successfully:', volume);
+          return volume;
+        } catch (error) {
+          lastError = error;
+          const status = error.response?.status;
+          const isRetryable = !status || status >= 500 || [
+            'ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND'
+          ].includes(error.code);
+          if (attempt < maxAttempts && isRetryable) {
+            const waitMs = 500 * attempt;
+            console.warn(`Volume API attempt ${attempt} failed (${status || error.code}). Retrying in ${waitMs}ms...`);
+            await new Promise(r => setTimeout(r, waitMs));
+            continue;
+          }
+          console.error('API request error:', error.message, status ? `status=${status}` : '');
+          throw new Error(`Failed to calculate volume: ${error.message}`);
         }
-
-        console.log('Volume calculated successfully:', volume);
-        return volume;
-      } catch (error) {
-        console.error('API request error:', error.message);
-        throw new Error(`Failed to calculate volume: ${error.message}`);
       }
+      throw lastError || new Error('Unknown error calling volume API');
     } catch (error) {
       console.error('VolumeCalculatorService error:', error);
       throw error;

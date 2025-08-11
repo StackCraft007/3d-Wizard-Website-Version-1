@@ -147,22 +147,40 @@ const generateQuote = (req, res) => {
       }
 
       // Initialize Google Sheets API (optional in local/dev)
-      const hasSheetsCreds = Boolean(process.env.GOOGLE_SERVICE_ACCOUNT_PATH && process.env.GOOGLE_SHEETS_ID);
       let client = null;
-      if (hasSheetsCreds) {
-        const keyPath = path.resolve(__dirname, '../../', process.env.GOOGLE_SERVICE_ACCOUNT_PATH);
-        if (require('fs').existsSync(keyPath)) {
-          const auth = new google.auth.GoogleAuth({
-            keyFile: keyPath,
-            scopes: ['https://www.googleapis.com/auth/spreadsheets']
-          });
-          client = await auth.getClient();
-          debug('google sheets auth client created');
-        } else {
-          debug('google sheets key file not found - skipping sheets update');
+      if (process.env.GOOGLE_SHEETS_ID) {
+        try {
+          const jsonInline = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+          const jsonBase64 = process.env.GOOGLE_SERVICE_ACCOUNT_JSON_BASE64;
+          if (jsonInline || jsonBase64) {
+            const rawJson = jsonInline || Buffer.from(jsonBase64, 'base64').toString('utf8');
+            const credentials = JSON.parse(rawJson);
+            const auth = new google.auth.GoogleAuth({
+              credentials,
+              scopes: ['https://www.googleapis.com/auth/spreadsheets']
+            });
+            client = await auth.getClient();
+            debug('google sheets auth from JSON env created');
+          } else if (process.env.GOOGLE_SERVICE_ACCOUNT_PATH) {
+            const keyPath = path.resolve(__dirname, '../../', process.env.GOOGLE_SERVICE_ACCOUNT_PATH);
+            if (require('fs').existsSync(keyPath)) {
+              const auth = new google.auth.GoogleAuth({
+                keyFile: keyPath,
+                scopes: ['https://www.googleapis.com/auth/spreadsheets']
+              });
+              client = await auth.getClient();
+              debug('google sheets auth from key file created');
+            } else {
+              debug('google sheets key file not found - skipping sheets update');
+            }
+          } else {
+            debug('no google service account credentials provided - skipping sheets update');
+          }
+        } catch (e) {
+          console.error('Failed to initialize Google Sheets auth:', e.message);
         }
       } else {
-        debug('google sheets not configured - skipping sheets update');
+        debug('GOOGLE_SHEETS_ID not set - skipping sheets update');
       }
 
       // Calculate quote details

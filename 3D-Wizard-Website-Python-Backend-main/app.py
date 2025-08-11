@@ -85,6 +85,10 @@ def calculate_volume():
         print(f"Error processing file: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/health', methods=['GET'])
+def health():
+    return jsonify({'status': 'ok'}), 200
+
 if __name__ == '__main__':
     app.debug = True
     print("Starting Flask server...")
