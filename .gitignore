@@ -1,0 +1,18 @@
+# Node
+**/node_modules/
+**/dist/
+**/.env
+**/.env.*
+**/.vercel/
+**/.DS_Store
+**/uploads/
+
+# Python
+**/venv/
+**/__pycache__/
+**/*.pyc
+
+# Secrets/keys
+3D-Wizard-Website-Backend-main/src/credentials/service-account-key.json
+3D-Wizard-Website-Backend-main/oauth_credentials.json
+3D-Wizard-Website-Backend-main/token.json

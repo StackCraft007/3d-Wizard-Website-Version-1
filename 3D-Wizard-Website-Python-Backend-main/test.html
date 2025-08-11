@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>STL Volume Calculator Test</title>
+</head>
+<body>
+    <h2>Test STL Volume Calculator API</h2>
+    <form id="uploadForm">
+        <input type="file" id="stlFile" accept=".stl" required>
+        <button type="submit">Calculate Volume</button>
+    </form>
+    <div id="result"></div>
+
+    <script>
+        document.getElementById('uploadForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const formData = new FormData();
+            const fileInput = document.getElementById('stlFile');
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                const response = await fetch('http://localhost:5001/calculate-volume', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                document.getElementById('result').textContent = 
+                    `Volume: ${data.volume} mm³`;
+            } catch (error) {
+                document.getElementById('result').textContent = 
+                    `Error: ${error.message}`;
+            }
+        };
+    </script>
+</body>
+</html>

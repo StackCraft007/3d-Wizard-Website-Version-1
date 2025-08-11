@@ -1,0 +1,6 @@
+# backend2 requirements
+numpy
+numpy-stl
+flask
+flask-cors
+gunicorn
